@@ -1,0 +1,1720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M-Working — Placement Register by MachineMind</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#07080B;
+    --surface:#0E1117;
+    --raised:#141922;
+    --raised-2:#1B212C;
+    --line:#232A38;
+    --line-soft:#1A202B;
+    --text:#ECEEF3;
+    --dim:#8B93A5;
+    --faint:#59616F;
+    --red:#FF3547;
+    --red-mid:#D31F30;
+    --red-deep:#7A0F1B;
+    --blue:#4D8DFF;
+    --blue-deep:#1B4A9E;
+    --ok:#34D399;
+    --r-sm:8px; --r-md:12px; --r-lg:18px;
+    --display:"Bricolage Grotesque",-apple-system,BlinkMacSystemFont,sans-serif;
+    --body:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+    --rail:230px;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+  body{margin:0;background:var(--void);color:var(--text);font-family:var(--body);
+    font-size:15px;line-height:1.5;min-height:100vh}
+  .hidden{display:none !important}
+  button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+  a{color:var(--red);text-decoration:none}
+  ::selection{background:var(--red);color:#fff}
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:var(--line);border-radius:20px;border:3px solid var(--void)}
+  ::-webkit-scrollbar-thumb:hover{background:var(--faint)}
+  :focus-visible{outline:2px solid var(--red);outline-offset:2px;border-radius:4px}
+  #bgCanvas{position:fixed;inset:0;z-index:0;display:block}
+
+  /* ───── form primitives ───── */
+  .fld{margin-bottom:18px}
+  .fld > label{display:block;font-family:var(--mono);font-size:10.5px;font-weight:500;
+    letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-bottom:7px}
+  .inp,select.inp,textarea.inp{width:100%;font-family:var(--body);font-size:14.5px;color:var(--text);
+    background:var(--void);border:1px solid var(--line);border-radius:var(--r-sm);
+    padding:11px 13px;transition:border-color .16s,background .16s}
+  .inp::placeholder{color:#454C5C}
+  .inp:hover{border-color:#2E3849}
+  .inp:focus{outline:none;border-color:var(--red-mid);background:#0A0C11}
+  textarea.inp{resize:vertical;min-height:82px;line-height:1.55}
+  select.inp{appearance:none;cursor:pointer;padding-right:34px;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238B93A5' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 13px center}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 18px}
+  @media(max-width:640px){.grid2{grid-template-columns:1fr}}
+  .fld-hint{font-size:12.5px;color:var(--faint);margin:-11px 0 18px;line-height:1.45}
+
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 20px;
+    border-radius:var(--r-sm);font-weight:600;font-size:14px;background:var(--red);color:#fff;
+    transition:transform .1s,box-shadow .18s,filter .18s}
+  .btn:hover{box-shadow:0 6px 24px rgba(255,53,71,.3);filter:brightness(1.08)}
+  .btn:active{transform:translateY(1px)}
+  .btn[disabled]{opacity:.45;pointer-events:none}
+  .btn-quiet{background:transparent;border:1px solid var(--line);color:var(--dim);
+    padding:9px 16px;font-size:13.5px;font-weight:500}
+  .btn-quiet:hover{border-color:var(--faint);color:var(--text);box-shadow:none;filter:none}
+  .btn-danger{background:transparent;border:1px solid rgba(255,53,71,.4);color:var(--red);
+    padding:9px 16px;font-size:13.5px;font-weight:500}
+  .btn-danger:hover{background:rgba(255,53,71,.12);border-color:var(--red);box-shadow:none;filter:none}
+  .btn-full{width:100%}
+
+  /* ───── logo ───── */
+  .mark{display:flex;align-items:center;gap:10px}
+  .mark svg{width:30px;height:30px;flex-shrink:0}
+  .mark-text{font-family:var(--display);font-size:20px;font-weight:800;letter-spacing:-.03em}
+  .mark-text b{color:var(--red);font-weight:800}
+
+  /* ───── auth ───── */
+  #authView{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;padding:24px}
+  .auth-center{flex:1;display:grid;place-items:center;width:100%}
+  .auth-shell{width:100%;max-width:940px;display:grid;grid-template-columns:1.05fr .95fr;
+    border:1px solid var(--line);border-radius:22px;overflow:hidden;
+    box-shadow:0 40px 90px -30px rgba(0,0,0,.8)}
+  @media(max-width:820px){.auth-shell{grid-template-columns:1fr;max-width:430px}.auth-poster{display:none}}
+  .auth-poster{padding:44px 40px;
+    background:linear-gradient(155deg,rgba(255,53,71,.16),transparent 54%),
+      linear-gradient(20deg,rgba(77,141,255,.13),transparent 50%),rgba(18,22,30,.88);
+    backdrop-filter:blur(20px) saturate(140%);-webkit-backdrop-filter:blur(20px) saturate(140%);
+    border-right:1px solid var(--line);display:flex;flex-direction:column;justify-content:space-between}
+  .poster-head{font-family:var(--display);font-size:40px;line-height:1.04;font-weight:800;
+    letter-spacing:-.035em;margin:38px 0 14px}
+  .poster-head em{font-style:normal;color:var(--red)}
+  .poster-sub{color:var(--dim);font-size:14.5px;max-width:34ch;line-height:1.55}
+  .poster-stats{display:flex;gap:28px;margin-top:38px;padding-top:24px;border-top:1px solid var(--line)}
+  .poster-stat b{display:block;font-family:var(--mono);font-size:19px;font-weight:700;color:var(--blue)}
+  .poster-stat span{font-size:11.5px;color:var(--faint);font-family:var(--mono);letter-spacing:.06em;text-transform:uppercase}
+  .auth-panel{padding:44px 40px;background:rgba(13,16,22,.9);
+    backdrop-filter:blur(20px) saturate(140%);-webkit-backdrop-filter:blur(20px) saturate(140%)}
+  @media(max-width:820px){.auth-panel{padding:34px 26px}}
+  .auth-mob-mark{display:none;margin-bottom:26px}
+  @media(max-width:820px){.auth-mob-mark{display:flex}}
+  .seg{display:flex;gap:4px;background:var(--void);border:1px solid var(--line);
+    border-radius:10px;padding:4px;margin-bottom:26px}
+  .seg button{flex:1;padding:9px;border-radius:7px;font-family:var(--mono);font-size:12.5px;
+    letter-spacing:.04em;color:var(--dim);transition:background .16s,color .16s}
+  .seg button.on{background:var(--raised-2);color:var(--red)}
+  .form-msg{font-size:13px;color:var(--red);margin-top:12px;min-height:18px;line-height:1.4}
+  .form-msg.good{color:var(--ok)}
+  .auth-foot{position:relative;z-index:1;text-align:center;padding:20px 20px 6px;
+    font-family:var(--mono);font-size:11px;color:var(--faint);line-height:1.8}
+  .auth-foot a{color:var(--dim)}
+  .auth-foot a:hover{color:var(--red)}
+
+  /* ───── shell ───── */
+  #appView{position:relative;z-index:1;display:grid;grid-template-columns:var(--rail) 1fr;min-height:100vh}
+  @media(max-width:900px){#appView{grid-template-columns:1fr}}
+  .rail{border-right:1px solid var(--line);background:rgba(14,17,23,.72);backdrop-filter:blur(12px);
+    padding:22px 16px;display:flex;flex-direction:column;gap:5px;position:sticky;top:0;height:100vh;overflow-y:auto}
+  @media(max-width:900px){.rail{display:none}}
+  .rail-mark{padding:0 8px 24px}
+  .nav-item{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;
+    font-size:14px;font-weight:500;color:var(--dim);text-align:left;width:100%;
+    transition:background .15s,color .15s}
+  .nav-item:hover{background:var(--raised);color:var(--text)}
+  .nav-item.on{background:var(--raised-2);color:var(--text)}
+  .nav-item.on .nav-ico{color:var(--red)}
+  .nav-ico{width:17px;flex-shrink:0;display:grid;place-items:center;color:var(--faint)}
+  .nav-count{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--faint);
+    background:var(--void);padding:2px 7px;border-radius:20px;border:1px solid var(--line)}
+
+  .maincol{display:flex;flex-direction:column;min-width:0}
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;
+    padding:13px 26px;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:35;
+    background:rgba(7,8,11,.9);backdrop-filter:blur(14px)}
+  @media(max-width:900px){.topbar{padding:12px 18px}}
+  .topbar-mark{display:none}
+  @media(max-width:900px){.topbar-mark{display:flex}}
+
+  /* profile menu */
+  .pmenu{position:relative;margin-left:auto}
+  .pmenu-btn{display:flex;align-items:center;gap:9px;padding:6px 12px 6px 7px;border-radius:30px;
+    border:1px solid var(--line);background:var(--surface);transition:border-color .15s}
+  .pmenu-btn:hover{border-color:var(--faint)}
+  .avatar{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;flex-shrink:0;
+    font-family:var(--mono);font-size:11px;font-weight:700;color:#fff;
+    background:linear-gradient(135deg,var(--red),var(--red-deep))}
+  .pmenu-name{font-size:13px;font-weight:500;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  @media(max-width:560px){.pmenu-name{display:none}}
+  .pmenu-caret{width:11px;color:var(--faint);transition:transform .2s}
+  .pmenu.open .pmenu-caret{transform:rotate(180deg)}
+  .pmenu-pop{position:absolute;right:0;top:calc(100% + 9px);width:250px;background:var(--raised);
+    border:1px solid var(--line);border-radius:var(--r-md);padding:7px;z-index:60;
+    box-shadow:0 24px 60px -16px rgba(0,0,0,.85);
+    opacity:0;transform:translateY(-8px) scale(.97);pointer-events:none;
+    transition:opacity .18s,transform .18s}
+  .pmenu.open .pmenu-pop{opacity:1;transform:none;pointer-events:auto}
+  .pmenu-head{padding:11px 12px 12px;border-bottom:1px solid var(--line-soft);margin-bottom:6px}
+  .pmenu-mail{font-family:var(--mono);font-size:11px;color:var(--dim);word-break:break-all;line-height:1.55}
+  .pmenu-item{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border-radius:8px;
+    font-size:13.5px;color:var(--dim);text-align:left;transition:background .14s,color .14s}
+  .pmenu-item:hover{background:var(--raised-2);color:var(--text)}
+  .pmenu-item svg{width:15px;flex-shrink:0}
+  .pmenu-item.danger:hover{color:var(--red)}
+
+  .chip{display:inline-block;font-family:var(--mono);font-size:9.5px;font-weight:700;
+    letter-spacing:.09em;text-transform:uppercase;padding:3px 8px;border-radius:5px}
+  .chip-owner{background:rgba(77,141,255,.14);color:var(--blue);border:1px solid rgba(77,141,255,.35)}
+  .chip-admin{background:rgba(255,53,71,.13);color:var(--red);border:1px solid rgba(255,53,71,.35)}
+
+  .tabbar{display:none}
+  @media(max-width:900px){
+    .tabbar{display:flex;position:fixed;bottom:0;left:0;right:0;z-index:40;
+      background:rgba(7,8,11,.95);backdrop-filter:blur(14px);border-top:1px solid var(--line);
+      padding:8px 4px calc(8px + env(safe-area-inset-bottom))}
+    .tabbar button{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;
+      padding:7px 2px;border-radius:9px;font-size:10px;font-family:var(--mono);color:var(--faint)}
+    .tabbar button.on{color:var(--red)}
+  }
+
+  .stage{padding:34px 40px 0;max-width:1080px;width:100%;perspective:1500px}
+  @media(max-width:900px){.stage{padding:24px 18px 0}}
+  .view-out{animation:viewOut .2s ease forwards}
+  .view-in{opacity:0;transform:rotateY(6deg) translateX(14px) translateZ(-30px)}
+  .view-in-active{transition:opacity .42s cubic-bezier(.2,.7,.2,1),transform .42s cubic-bezier(.2,.7,.2,1);
+    opacity:1;transform:none}
+  @keyframes viewOut{from{opacity:1;transform:none}to{opacity:0;transform:rotateY(-6deg) translateX(-14px) translateZ(-30px)}}
+
+  .view-head{margin-bottom:28px}
+  .eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--red);margin-bottom:9px}
+  .view-title{font-family:var(--display);font-size:33px;font-weight:800;letter-spacing:-.035em;
+    line-height:1.08;margin:0 0 8px}
+  @media(max-width:640px){.view-title{font-size:27px}}
+  .view-sub{color:var(--dim);font-size:14.5px;margin:0;max-width:62ch;line-height:1.55}
+
+  .card{background:rgba(14,17,23,.85);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+    border:1px solid var(--line);border-radius:var(--r-lg);padding:26px;transition:transform .15s ease}
+  @media(max-width:640px){.card{padding:20px}}
+  .card-h{font-family:var(--display);font-size:16px;font-weight:600;letter-spacing:-.015em;margin:0 0 18px}
+
+  /* verify banner */
+  .banner{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;
+    background:rgba(255,53,71,.07);border:1px solid rgba(255,53,71,.3);
+    border-radius:var(--r-md);padding:15px 18px;margin-bottom:24px}
+  .banner-t{font-weight:600;font-size:14px;margin-bottom:3px}
+  .banner-b{font-size:13.2px;color:var(--dim);line-height:1.5}
+
+  /* stats */
+  .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:30px}
+  @media(max-width:860px){.stat-grid{grid-template-columns:repeat(2,1fr)}}
+  .stat{background:rgba(14,17,23,.85);backdrop-filter:blur(14px);border:1px solid var(--line);
+    border-radius:var(--r-md);padding:18px;position:relative;overflow:hidden;transition:transform .15s ease}
+  .stat::after{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--line)}
+  .stat.r::after{background:var(--red)}
+  .stat.b::after{background:var(--blue)}
+  .stat-n{font-family:var(--mono);font-size:28px;font-weight:700;letter-spacing:-.03em;line-height:1}
+  .stat-l{font-size:11.5px;font-family:var(--mono);letter-spacing:.07em;text-transform:uppercase;
+    color:var(--faint);margin-top:9px}
+
+  /* reach pills */
+  .reach{display:flex;flex-wrap:wrap;gap:7px}
+  .reach-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border-radius:22px;
+    font-size:12.5px;font-weight:500;border:1px solid var(--line);color:var(--dim);
+    background:var(--void);transition:border-color .16s,color .16s,background .16s,transform .1s}
+  .reach-btn:hover{color:var(--text);border-color:var(--faint);background:var(--raised)}
+  .reach-btn:active{transform:translateY(1px)}
+  .reach-btn svg{width:13px;height:13px;flex-shrink:0}
+  .reach-mail:hover{border-color:var(--red-mid);color:var(--red)}
+  .reach-call:hover{border-color:var(--blue-deep);color:var(--blue)}
+  .reach-wa:hover{border-color:#2E7D50;color:#4BD37B}
+  .reach-cv:hover{border-color:#5D6DAE;color:#9AA9E8}
+  .reach-src:hover{border-color:var(--blue-deep);color:var(--blue)}
+  .reach-btn.locked{opacity:.5;cursor:not-allowed}
+  .reach-btn.locked:hover{color:var(--dim);border-color:var(--line);background:var(--void)}
+
+  /* ───── multi-select ───── */
+  .msel{position:relative}
+  .msel-trigger{width:100%;display:flex;align-items:center;gap:8px;min-height:44px;
+    background:var(--void);border:1px solid var(--line);border-radius:var(--r-sm);
+    padding:8px 34px 8px 11px;text-align:left;flex-wrap:wrap;transition:border-color .16s;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238B93A5' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 13px center}
+  .msel-trigger:hover{border-color:#2E3849}
+  .msel.open .msel-trigger{border-color:var(--red-mid)}
+  .msel-ph{color:#454C5C;font-size:14.5px}
+  .msel-chip{display:inline-flex;align-items:center;gap:6px;background:var(--raised-2);
+    border:1px solid var(--line);border-radius:20px;padding:3px 6px 3px 10px;font-size:12.5px}
+  .msel-chip i{font-style:normal;color:var(--faint);font-size:14px;line-height:1;padding:0 2px;cursor:pointer}
+  .msel-chip i:hover{color:var(--red)}
+  .msel-pop{position:absolute;left:0;right:0;top:calc(100% + 6px);background:var(--raised);
+    border:1px solid var(--line);border-radius:var(--r-md);z-index:70;max-height:270px;overflow-y:auto;
+    padding:6px;box-shadow:0 24px 60px -16px rgba(0,0,0,.85);
+    opacity:0;transform:translateY(-6px);pointer-events:none;transition:opacity .16s,transform .16s}
+  .msel.open .msel-pop{opacity:1;transform:none;pointer-events:auto}
+  .msel-opt{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:7px;
+    font-size:13.5px;color:var(--dim);cursor:pointer;transition:background .13s,color .13s}
+  .msel-opt:hover{background:var(--raised-2);color:var(--text)}
+  .msel-opt input{accent-color:var(--red);width:14px;height:14px;cursor:pointer;flex-shrink:0}
+  .msel-opt.sel{color:var(--text)}
+  .msel-add{display:flex;gap:7px;padding:7px 6px 5px;border-top:1px solid var(--line-soft);margin-top:5px}
+  .msel-add input{flex:1;font-size:13px;padding:8px 10px;background:var(--void);
+    border:1px solid var(--line);border-radius:6px;color:var(--text);font-family:var(--body)}
+  .msel-add input:focus{outline:none;border-color:var(--red-mid)}
+  .msel-add button{padding:0 13px;border-radius:6px;background:var(--raised-2);
+    font-size:12.5px;color:var(--dim);border:1px solid var(--line)}
+  .msel-add button:hover{color:var(--text);border-color:var(--faint)}
+
+  /* ───── job cards ───── */
+  .toolbar{display:flex;gap:10px;align-items:center;margin-bottom:20px;flex-wrap:wrap}
+  .search-wrap{position:relative;flex:1;min-width:190px}
+  .search-wrap svg{position:absolute;left:13px;top:50%;transform:translateY(-50%);
+    width:15px;height:15px;color:var(--faint);pointer-events:none}
+  .search-wrap .inp{padding-left:37px}
+  .toggle{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--dim);
+    padding:10px 14px;border:1px solid var(--line);border-radius:var(--r-sm);cursor:pointer;
+    background:var(--void);white-space:nowrap;transition:border-color .15s,color .15s}
+  .toggle:hover{border-color:var(--faint);color:var(--text)}
+  .toggle input{accent-color:var(--red);width:14px;height:14px;cursor:pointer}
+
+  .job{background:rgba(14,17,23,.85);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+    border:1px solid var(--line);border-radius:var(--r-lg);padding:22px;margin-bottom:14px;
+    transition:border-color .2s,transform .15s ease}
+  @media(max-width:640px){.job{padding:18px}}
+  .job:hover{border-color:#2E3849}
+  .job.shut{opacity:.6}
+  .job-hd{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}
+  .job-role{font-family:var(--display);font-size:19px;font-weight:600;letter-spacing:-.02em;margin:0 0 4px;line-height:1.2}
+  .job-org{font-size:13.5px;font-weight:600;color:var(--red)}
+  .job-org.anon{color:var(--faint);font-weight:400;font-style:italic}
+  .tally{flex-shrink:0;text-align:right}
+  .tally-n{font-family:var(--mono);font-size:25px;font-weight:700;color:var(--blue);line-height:1;letter-spacing:-.03em}
+  .tally-l{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-top:5px}
+  .tally.none .tally-n{color:var(--faint)}
+  .tally.shut .tally-n{font-size:12px;color:var(--red);border:1px solid rgba(255,53,71,.4);
+    border-radius:5px;padding:5px 10px;display:inline-block;letter-spacing:.09em;font-weight:700}
+
+  .facts{display:flex;flex-wrap:wrap;gap:7px 8px;margin-top:15px}
+  .fact{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11.5px;
+    color:var(--dim);background:var(--void);border:1px solid var(--line-soft);padding:5px 10px;border-radius:6px}
+  .fact svg{width:12px;height:12px;color:var(--faint);flex-shrink:0}
+  .fact.due-soon{border-color:rgba(255,53,71,.35);color:var(--red)}
+  .dom-tag{display:inline-flex;font-family:var(--mono);font-size:11px;color:var(--blue);
+    background:rgba(77,141,255,.08);border:1px solid rgba(77,141,255,.22);padding:4px 9px;border-radius:6px}
+
+  .expander{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;
+    margin-top:18px;padding:11px;border-radius:var(--r-sm);border:1px solid var(--line);
+    background:var(--void);color:var(--dim);font-size:13.2px;font-weight:500;
+    transition:border-color .16s,color .16s,background .16s}
+  .expander:hover{border-color:var(--faint);color:var(--text);background:var(--raised)}
+  .expander svg{width:13px;transition:transform .25s}
+  .expander.open svg{transform:rotate(180deg)}
+  .drawer{overflow:hidden;max-height:0;transition:max-height .4s cubic-bezier(.3,.8,.3,1)}
+  .drawer.open{max-height:4000px}
+  .drawer-in{padding-top:20px}
+  .job-note{font-size:13.5px;color:var(--dim);margin:0 0 18px;line-height:1.55;
+    padding-left:13px;border-left:2px solid var(--line)}
+
+  /* experience axis */
+  .axis-cap{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:16px;gap:12px;flex-wrap:wrap}
+  .axis-ttl{font-family:var(--mono);font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--faint)}
+  .axis-key{font-family:var(--mono);font-size:10px;color:var(--faint);display:flex;gap:12px;flex-wrap:wrap}
+  .axis-key i{display:inline-flex;align-items:center;gap:5px;font-style:normal}
+  .axis-key b{width:7px;height:7px;border-radius:50%;display:inline-block}
+  .axis{position:relative;height:52px;margin:0 4px 6px}
+  .axis-line{position:absolute;left:0;right:0;top:32px;height:1px;background:var(--line)}
+  .axis-fill{position:absolute;top:32px;height:1px;background:linear-gradient(90deg,var(--blue-deep),var(--blue));opacity:.75}
+  .axis-gate{position:absolute;top:20px;bottom:8px;width:1px;background:var(--red);opacity:.8}
+  .axis-gate::after{content:attr(data-lab);position:absolute;bottom:-16px;left:0;transform:translateX(-50%);
+    font-family:var(--mono);font-size:9.5px;color:var(--red);white-space:nowrap}
+  .dot{position:absolute;top:32px;width:11px;height:11px;border-radius:50%;
+    transform:translate(-50%,-50%);border:2px solid var(--surface)}
+  .dot.in{background:var(--blue);box-shadow:0 0 0 3px rgba(77,141,255,.18)}
+  .dot.out{background:var(--faint)}
+  .axis-scale{display:flex;justify-content:space-between;font-family:var(--mono);font-size:9.5px;color:#3C4454;margin-top:2px}
+
+  /* candidate rows */
+  .cand{padding:15px 0;border-bottom:1px solid var(--line-soft)}
+  .cand:last-child{border-bottom:none}
+  .cand-top{display:flex;justify-content:space-between;gap:12px;align-items:baseline;flex-wrap:wrap}
+  .cand-nm{font-weight:600;font-size:14.5px}
+  .cand-meta{font-family:var(--mono);font-size:11.5px;color:var(--faint)}
+  .cand-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+  .tag{font-family:var(--mono);font-size:10.5px;color:var(--dim);background:var(--void);
+    border:1px solid var(--line-soft);padding:3px 9px;border-radius:5px}
+  .tag.hit{color:var(--blue);border-color:rgba(77,141,255,.3);background:rgba(77,141,255,.07)}
+  .tag.notice{color:var(--ok);border-color:rgba(52,211,153,.25)}
+  .cand-reach{margin-top:11px}
+  .rank{font-family:var(--mono);font-size:10px;color:var(--blue);letter-spacing:.06em;
+    text-transform:uppercase;background:rgba(77,141,255,.1);border:1px solid rgba(77,141,255,.25);
+    padding:2px 7px;border-radius:4px}
+
+  /* candidate list page */
+  .clist-item{background:rgba(14,17,23,.85);backdrop-filter:blur(14px);border:1px solid var(--line);
+    border-radius:var(--r-md);margin-bottom:11px;overflow:hidden;transition:border-color .18s}
+  .clist-item:hover{border-color:#2E3849}
+  .clist-hd{display:flex;align-items:center;gap:14px;padding:16px 18px;cursor:pointer;width:100%;text-align:left}
+  .clist-hd:hover{background:rgba(255,255,255,.02)}
+  .clist-nm{font-weight:600;font-size:14.5px}
+  .clist-sub{font-family:var(--mono);font-size:11.5px;color:var(--faint);margin-top:3px}
+  .clist-caret{margin-left:auto;width:13px;color:var(--faint);transition:transform .25s;flex-shrink:0}
+  .clist-item.open .clist-caret{transform:rotate(180deg)}
+  .clist-body{overflow:hidden;max-height:0;transition:max-height .38s cubic-bezier(.3,.8,.3,1)}
+  .clist-item.open .clist-body{max-height:800px}
+  .clist-inner{padding:2px 18px 20px;border-top:1px solid var(--line-soft);margin-top:-1px}
+  .detail-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:16px;margin:16px 0}
+  .detail-k{font-family:var(--mono);font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--faint);margin-bottom:5px}
+  .detail-v{font-size:13.5px}
+
+  .void-box{text-align:center;padding:52px 24px;border:1px dashed var(--line);border-radius:var(--r-lg);
+    color:var(--dim);font-size:14px}
+  .void-t{font-family:var(--display);font-size:17px;font-weight:600;color:var(--text);margin-bottom:7px}
+  .void-sm{padding:20px 16px;font-size:13px;text-align:left;border:none;color:var(--faint)}
+
+  /* resume */
+  .drop{border:1.5px dashed var(--line);border-radius:var(--r-md);padding:22px;text-align:center;
+    cursor:pointer;transition:border-color .18s,background .18s}
+  .drop:hover,.drop.over{border-color:var(--red-mid);background:rgba(255,53,71,.05)}
+  .drop-ico{width:26px;height:26px;color:var(--faint);margin:0 auto 10px;display:block}
+  .drop-t{font-size:13.5px;font-weight:500}
+  .drop-s{font-size:12px;color:var(--faint);margin-top:5px;font-family:var(--mono)}
+  .cv-have{display:flex;align-items:center;gap:13px;padding:14px 16px;background:var(--void);
+    border:1px solid var(--line);border-radius:var(--r-md);flex-wrap:wrap}
+  .cv-ico{width:34px;height:34px;border-radius:8px;background:rgba(255,53,71,.11);
+    display:grid;place-items:center;color:var(--red);flex-shrink:0}
+  .cv-ico svg{width:16px;height:16px}
+  .cv-nm{font-size:13.5px;font-weight:500;word-break:break-all;line-height:1.35}
+  .cv-sz{font-family:var(--mono);font-size:11px;color:var(--faint);margin-top:2px}
+  .vis-seg{display:flex;gap:4px;background:var(--void);border:1px solid var(--line);border-radius:9px;padding:4px}
+  .vis-seg button{flex:1;padding:9px 14px;border-radius:6px;font-size:12.5px;font-weight:500;
+    color:var(--dim);display:flex;align-items:center;justify-content:center;gap:7px;transition:background .15s,color .15s}
+  .vis-seg button svg{width:13px;height:13px}
+  .vis-seg button.on{background:var(--raised-2);color:var(--text)}
+  .vis-seg button.on[data-vis="public"]{color:var(--blue)}
+  .vis-seg button.on[data-vis="private"]{color:var(--red)}
+
+  /* admin */
+  .arow{padding:18px 0;border-bottom:1px solid var(--line-soft)}
+  .arow:last-child{border-bottom:none}
+  .arow-hd{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-bottom:13px}
+  .arow-id{flex:1 1 200px;min-width:170px}
+  .arow-nm{font-weight:600;font-size:14px}
+  .arow-em{font-family:var(--mono);font-size:11.5px;color:var(--faint);word-break:break-all;margin-top:2px}
+  .perms{display:flex;gap:7px;flex-wrap:wrap}
+  .perm{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;color:var(--dim);
+    background:var(--void);border:1px solid var(--line);padding:8px 12px;border-radius:7px;cursor:pointer;
+    transition:border-color .15s,color .15s}
+  .perm:hover{border-color:var(--faint)}
+  .perm input{accent-color:var(--red);width:13px;height:13px;cursor:pointer}
+  .perm:has(input:checked){border-color:var(--red-mid);background:rgba(255,53,71,.06);color:var(--text)}
+  .perm.base{opacity:.75;cursor:default}
+  .perm.base:has(input:checked){border-color:rgba(77,141,255,.3);background:rgba(77,141,255,.07)}
+  .perm.base input{accent-color:var(--blue);cursor:not-allowed}
+  .perm-note{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--faint);margin-bottom:9px}
+
+  /* footer */
+  .foot{max-width:1080px;margin:54px auto 0;padding:24px 0 100px;border-top:1px solid var(--line-soft);
+    display:flex;flex-wrap:wrap;gap:10px 22px;align-items:center;justify-content:space-between;
+    font-family:var(--mono);font-size:11.5px;color:var(--faint);line-height:1.7}
+  @media(max-width:900px){.foot{padding:22px 18px 110px;margin-top:42px}}
+  .foot a{color:var(--dim);border-bottom:1px solid transparent;transition:color .15s,border-color .15s}
+  .foot a:hover{color:var(--red);border-color:var(--red-mid)}
+
+  /* toast + modal */
+  #toasts{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);z-index:200;
+    display:flex;flex-direction:column;gap:9px;align-items:center;pointer-events:none;width:max-content;max-width:92vw}
+  @media(max-width:900px){#toasts{bottom:82px}}
+  .toast{display:flex;align-items:center;gap:11px;background:var(--raised);border:1px solid var(--line);
+    border-radius:11px;padding:12px 17px;font-size:13.5px;box-shadow:0 12px 34px rgba(0,0,0,.6);
+    animation:pop .26s cubic-bezier(.2,.9,.3,1.2)}
+  .toast b{width:6px;height:6px;border-radius:50%;background:var(--ok);flex-shrink:0}
+  .toast.bad b{background:var(--red)}
+  .toast.bad{border-color:rgba(255,53,71,.35)}
+  @keyframes pop{from{opacity:0;transform:translateY(12px) scale(.96)}to{opacity:1;transform:none}}
+  .scrim{position:fixed;inset:0;background:rgba(3,4,7,.78);backdrop-filter:blur(4px);
+    z-index:150;display:grid;place-items:center;padding:22px;animation:fade .18s}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+  .modal{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);
+    padding:28px;max-width:410px;width:100%;animation:pop .24s cubic-bezier(.2,.9,.3,1.2)}
+  .modal-t{font-family:var(--display);font-size:19px;font-weight:600;letter-spacing:-.02em;margin:0 0 9px}
+  .modal-b{color:var(--dim);font-size:14px;line-height:1.55;margin:0 0 24px}
+  .modal-acts{display:flex;gap:10px;justify-content:flex-end}
+
+  .rise{animation:rise .42s cubic-bezier(.2,.7,.3,1) backwards}
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  @media(prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;
+      transition-duration:.01ms !important}
+  }
+</style>
+</head>
+<body>
+<canvas id="bgCanvas" aria-hidden="true"></canvas>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <linearGradient id="mwg" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#FF3547"/><stop offset="1" stop-color="#7A0F1B"/>
+  </linearGradient>
+</defs></svg>
+
+<!-- ══════════ AUTH ══════════ -->
+<div id="authView">
+  <div class="auth-center">
+    <div class="auth-shell">
+      <aside class="auth-poster">
+        <div class="mark">
+          <svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="9" fill="url(#mwg)"/><path d="M7 21.5V10.5l4.5 5.5L16 10.5l4.5 5.5L25 10.5v11" stroke="#fff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span class="mark-text">M<b>-</b>Working</span>
+        </div>
+        <div>
+          <h1 class="poster-head">Every opening,<br>already <em>matched</em>.</h1>
+          <p class="poster-sub">Post a role and the register shows you who qualifies — before you've read a single application.</p>
+        </div>
+        <div class="poster-stats">
+          <div class="poster-stat"><b>1</b><span>Register</span></div>
+          <div class="poster-stat"><b>0</b><span>Spreadsheets</span></div>
+          <div class="poster-stat"><b>∞</b><span>Matches</span></div>
+        </div>
+      </aside>
+
+      <div class="auth-panel">
+        <div class="mark auth-mob-mark">
+          <svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="9" fill="url(#mwg)"/><path d="M7 21.5V10.5l4.5 5.5L16 10.5l4.5 5.5L25 10.5v11" stroke="#fff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span class="mark-text">M<b>-</b>Working</span>
+        </div>
+
+        <div class="seg">
+          <button id="segIn" class="on" type="button">Log in</button>
+          <button id="segUp" type="button">Sign up</button>
+        </div>
+
+        <form id="formIn">
+          <div class="fld"><label for="inMail">Email</label>
+            <input class="inp" id="inMail" type="email" required autocomplete="email" placeholder="you@example.com" /></div>
+          <div class="fld"><label for="inPass">Password</label>
+            <input class="inp" id="inPass" type="password" required autocomplete="current-password" placeholder="••••••••" /></div>
+          <button class="btn btn-full" type="submit">Log in</button>
+          <div class="form-msg" id="msgIn"></div>
+        </form>
+
+        <form id="formUp" class="hidden">
+          <div class="fld"><label for="upMail">Email</label>
+            <input class="inp" id="upMail" type="email" required autocomplete="email" placeholder="you@example.com" /></div>
+          <div class="fld"><label for="upPass">Password</label>
+            <input class="inp" id="upPass" type="password" required minlength="6" autocomplete="new-password" placeholder="At least 6 characters" /></div>
+          <button class="btn btn-full" type="submit">Create account</button>
+          <p class="fld-hint" style="margin:13px 0 0">We'll email you a verification link. Confirm it to unlock posting jobs.</p>
+          <div class="form-msg" id="msgUp"></div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="auth-foot">
+    © <span id="yr1"></span> <a href="https://www.machinemind.in" target="_blank" rel="noopener">MachineMind</a>® · All rights reserved.
+    M-Working® is a MachineMind® product · <a href="mailto:fiberxpool@gmail.com?subject=Found%20you%20on%20M-Working">Contact us</a>
+  </div>
+</div>
+
+<!-- ══════════ APP ══════════ -->
+<div id="appView" class="hidden">
+  <nav class="rail">
+    <div class="rail-mark mark">
+      <svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="9" fill="url(#mwg)"/><path d="M7 21.5V10.5l4.5 5.5L16 10.5l4.5 5.5L25 10.5v11" stroke="#fff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span class="mark-text">M<b>-</b>Working</span>
+    </div>
+    <button class="nav-item on" data-view="vOverview" type="button">
+      <span class="nav-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="1.5" width="5.5" height="5.5" rx="1.5"/><rect x="9" y="1.5" width="5.5" height="5.5" rx="1.5"/><rect x="1.5" y="9" width="5.5" height="5.5" rx="1.5"/><rect x="9" y="9" width="5.5" height="5.5" rx="1.5"/></svg></span>
+      Overview</button>
+    <button class="nav-item" data-view="vPost" type="button">
+      <span class="nav-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 3v10M3 8h10" stroke-linecap="round"/></svg></span>
+      Post a Job</button>
+    <button class="nav-item" data-view="vJobs" type="button">
+      <span class="nav-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="4.5" width="13" height="9.5" rx="1.5"/><path d="M5.5 4.5V3a1.5 1.5 0 011.5-1.5h2A1.5 1.5 0 0110.5 3v1.5"/></svg></span>
+      Openings<span class="nav-count" id="navJobCount">0</span></button>
+    <button class="nav-item" data-view="vCands" type="button">
+      <span class="nav-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="5" r="2.4"/><path d="M1.5 13.5c0-2.5 2-4 4.5-4s4.5 1.5 4.5 4"/><path d="M11 3.2a2.2 2.2 0 010 4.3M12.5 13.5c0-1.6-.5-2.8-1.4-3.6"/></svg></span>
+      Candidates<span class="nav-count" id="navCandCount">0</span></button>
+    <button class="nav-item hidden" data-view="vAdmin" id="navAdmin" type="button">
+      <span class="nav-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1.5l5.5 2.2v4c0 3.2-2.3 5.6-5.5 6.8-3.2-1.2-5.5-3.6-5.5-6.8v-4z"/></svg></span>
+      Admin</button>
+  </nav>
+
+  <div class="maincol">
+    <header class="topbar">
+      <div class="mark topbar-mark">
+        <svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="9" fill="url(#mwg)"/><path d="M7 21.5V10.5l4.5 5.5L16 10.5l4.5 5.5L25 10.5v11" stroke="#fff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span class="mark-text">M<b>-</b>Working</span>
+      </div>
+
+      <div class="pmenu" id="pmenu">
+        <button class="pmenu-btn" id="pmenuBtn" type="button" aria-haspopup="true" aria-expanded="false">
+          <span class="avatar" id="pmAvatar">?</span>
+          <span class="pmenu-name" id="pmName">My Profile</span>
+          <svg class="pmenu-caret" viewBox="0 0 12 8" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M1 1l5 5 5-5" stroke-linecap="round"/></svg>
+        </button>
+        <div class="pmenu-pop" role="menu">
+          <div class="pmenu-head">
+            <span class="chip hidden" id="pmChip" style="margin-bottom:7px"></span>
+            <div class="pmenu-mail" id="pmMail"></div>
+          </div>
+          <button class="pmenu-item" data-view="vProfile" type="button" role="menuitem">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="5" r="2.8"/><path d="M2.5 14c0-2.8 2.5-4.5 5.5-4.5s5.5 1.7 5.5 4.5"/></svg>
+            My Profile</button>
+          <button class="pmenu-item" id="pmVerify" type="button" role="menuitem">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="3" width="13" height="10" rx="1.5"/><path d="M2 4l6 4.5L14 4"/></svg>
+            Resend verification</button>
+          <button class="pmenu-item danger" id="pmOut" type="button" role="menuitem">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 14H3.5A1.5 1.5 0 012 12.5v-9A1.5 1.5 0 013.5 2H6" stroke-linecap="round"/><path d="M10.5 11L14 8l-3.5-3M14 8H6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Log out</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="stage">
+
+      <div class="banner hidden" id="verifyBanner">
+        <div style="flex:1;min-width:220px">
+          <div class="banner-t">Confirm your email address</div>
+          <div class="banner-b">We sent a link to <b id="vbMail"></b>. Click it, then reload this page. Until then you can build your profile, but not post jobs.</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn-quiet" id="vbResend" type="button">Resend link</button>
+          <button class="btn-quiet" id="vbCheck" type="button">I've verified</button>
+        </div>
+      </div>
+
+      <!-- OVERVIEW -->
+      <section id="vOverview" class="view">
+        <div class="view-head">
+          <div class="eyebrow">Register</div>
+          <h1 class="view-title" id="ovGreet">Overview</h1>
+          <p class="view-sub">Live count of what's open, who's in the pool, and where you fit.</p>
+        </div>
+        <div class="stat-grid">
+          <div class="stat r"><div class="stat-n" id="stOpen">0</div><div class="stat-l">Open roles</div></div>
+          <div class="stat b"><div class="stat-n" id="stCands">0</div><div class="stat-l">In the pool</div></div>
+          <div class="stat"><div class="stat-n" id="stMine">0</div><div class="stat-l">Posted by you</div></div>
+          <div class="stat r"><div class="stat-n" id="stSoon">0</div><div class="stat-l">Closing ≤ 7 days</div></div>
+        </div>
+        <div class="card"><h2 class="card-h">Openings you qualify for</h2><div id="ovMatches"></div></div>
+      </section>
+
+      <!-- PROFILE -->
+      <section id="vProfile" class="view hidden">
+        <div class="view-head">
+          <div class="eyebrow">Your entry</div>
+          <h1 class="view-title">Candidate profile</h1>
+          <p class="view-sub">This is what a recruiter sees the moment their posting matches one of your domains.</p>
+        </div>
+        <div class="card" style="margin-bottom:18px">
+          <form id="formProfile">
+            <div class="fld"><label for="pName">Full name</label>
+              <input class="inp" id="pName" type="text" required placeholder="e.g. Priya Sharma" /></div>
+            <div class="grid2">
+              <div class="fld"><label for="pExp">Years of experience</label>
+                <input class="inp" id="pExp" type="number" min="0" max="60" step="0.5" required placeholder="0" /></div>
+              <div class="fld"><label for="pPhone">Phone</label>
+                <input class="inp" id="pPhone" type="tel" placeholder="9876543210" /></div>
+            </div>
+            <div class="fld"><label>Domains — pick as many as apply</label><div id="mselProfile"></div></div>
+            <div class="fld"><label for="pNotice">Notice period</label>
+              <select class="inp" id="pNotice">
+                <option value="">Not specified</option><option>Immediate</option><option>15 days</option>
+                <option>30 days</option><option>45 days</option><option>60 days</option><option>90+ days</option>
+              </select></div>
+            <button class="btn" type="submit">Save profile</button>
+            <span id="pSaved" style="margin-left:13px;font-size:13px;color:var(--ok)"></span>
+          </form>
+        </div>
+
+        <div class="card">
+          <h2 class="card-h">Resume</h2>
+          <div id="cvEmpty">
+            <div class="drop" id="cvDrop" tabindex="0" role="button" aria-label="Choose a resume file">
+              <svg class="drop-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.5 15v3a2.5 2.5 0 002.5 2.5h12a2.5 2.5 0 002.5-2.5v-3" stroke-linecap="round"/></svg>
+              <div class="drop-t">Choose a file or drop it here</div>
+              <div class="drop-s">PDF, DOC or DOCX · up to 700 KB</div>
+            </div>
+          </div>
+          <div id="cvFilled" class="hidden">
+            <div class="cv-have">
+              <div class="cv-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 1.5H4.5A1.5 1.5 0 003 3v10a1.5 1.5 0 001.5 1.5h7A1.5 1.5 0 0013 13V5.5z"/><path d="M9 1.5V5.5H13"/></svg></div>
+              <div style="flex:1;min-width:130px">
+                <div class="cv-nm" id="cvName">—</div><div class="cv-sz" id="cvSize">—</div>
+              </div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <button class="btn-quiet" id="cvView" type="button">View</button>
+                <button class="btn-quiet" id="cvSwap" type="button">Replace</button>
+                <button class="btn-danger" id="cvKill" type="button">Remove</button>
+              </div>
+            </div>
+            <div style="margin-top:20px">
+              <label style="display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-bottom:8px">Who can open it</label>
+              <div class="vis-seg" id="cvVis">
+                <button data-vis="public" type="button"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><path d="M1.5 8h13M8 1.5c1.8 2 2.6 4.1 2.6 6.5S9.8 12.5 8 14.5c-1.8-2-2.6-4.1-2.6-6.5S6.2 3.5 8 1.5z"/></svg>Anyone signed in</button>
+                <button data-vis="private" type="button"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5.5 7V4.8a2.5 2.5 0 015 0V7"/></svg>Only me &amp; admins</button>
+              </div>
+              <p class="fld-hint" style="margin:10px 0 0" id="cvVisNote"></p>
+            </div>
+          </div>
+          <input type="file" id="cvInput" accept=".pdf,.doc,.docx" class="hidden" />
+        </div>
+      </section>
+
+      <!-- POST JOB -->
+      <section id="vPost" class="view hidden">
+        <div class="view-head">
+          <div class="eyebrow">New listing</div>
+          <h1 class="view-title">Post an opening</h1>
+          <p class="view-sub">Domains and minimum experience drive the matching — everything else is context for the candidate.</p>
+        </div>
+        <div class="card">
+          <form id="formJob">
+            <div class="grid2">
+              <div class="fld"><label for="jRole">Role</label>
+                <input class="inp" id="jRole" type="text" required placeholder="e.g. Frontend Developer Intern" /></div>
+              <div class="fld"><label for="jOrg">Company <span style="text-transform:none;letter-spacing:0">(optional)</span></label>
+                <input class="inp" id="jOrg" type="text" placeholder="Leave blank if confidential" /></div>
+            </div>
+            <div class="grid2">
+              <div class="fld"><label for="jLoc">Location</label>
+                <input class="inp" id="jLoc" type="text" required placeholder="e.g. Ghaziabad / Remote" /></div>
+              <div class="fld"><label for="jDate">Last date to apply</label>
+                <input class="inp" id="jDate" type="date" required /></div>
+            </div>
+            <div class="fld"><label>Relevant domains — pick as many as apply</label><div id="mselJob"></div></div>
+            <div class="grid2">
+              <div class="fld"><label for="jMin">Minimum years of experience</label>
+                <input class="inp" id="jMin" type="number" min="0" max="60" step="0.5" value="0" required /></div>
+              <div class="fld"><label for="jSrc">Source / reference link <span style="text-transform:none;letter-spacing:0">(optional)</span></label>
+                <input class="inp" id="jSrc" type="url" placeholder="https://…" /></div>
+            </div>
+            <p class="fld-hint">Where the opening came from — a LinkedIn post, careers page, or the original job ad.</p>
+            <div class="fld"><label for="jNotes">Eligibility notes <span style="text-transform:none;letter-spacing:0">(optional)</span></label>
+              <textarea class="inp" id="jNotes" placeholder="e.g. Final-year students only. Must know React and Git."></textarea></div>
+            <div class="grid2">
+              <div class="fld"><label for="jMail">Contact email</label>
+                <input class="inp" id="jMail" type="email" placeholder="hr@company.com" /></div>
+              <div class="fld"><label for="jPhone">Contact number</label>
+                <input class="inp" id="jPhone" type="tel" placeholder="9876543210" /></div>
+            </div>
+            <p class="fld-hint">At least one of the two is required — this is how candidates reach you.</p>
+            <button class="btn" id="jSubmit" type="submit">Post opening</button>
+            <div class="form-msg" id="msgJob"></div>
+          </form>
+        </div>
+      </section>
+
+      <!-- JOBS -->
+      <section id="vJobs" class="view hidden">
+        <div class="view-head">
+          <div class="eyebrow">The board</div>
+          <h1 class="view-title">Openings</h1>
+          <p class="view-sub" id="jobsSub">&nbsp;</p>
+        </div>
+        <div class="toolbar">
+          <div class="search-wrap">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5L14 14" stroke-linecap="round"/></svg>
+            <input class="inp" id="jobSearch" type="search" placeholder="Search role, company, domain or location" />
+          </div>
+          <label class="toggle"><input type="checkbox" id="showShut" /> Show closed</label>
+        </div>
+        <div id="jobsList"></div>
+      </section>
+
+      <!-- CANDIDATES -->
+      <section id="vCands" class="view hidden">
+        <div class="view-head">
+          <div class="eyebrow">The pool</div>
+          <h1 class="view-title">Candidates</h1>
+          <p class="view-sub" id="candsSub">&nbsp;</p>
+        </div>
+        <div class="toolbar">
+          <div class="search-wrap">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5L14 14" stroke-linecap="round"/></svg>
+            <input class="inp" id="candSearch" type="search" placeholder="Search name or domain" />
+          </div>
+        </div>
+        <div id="candsList"></div>
+      </section>
+
+      <!-- ADMIN -->
+      <section id="vAdmin" class="view hidden">
+        <div class="view-head">
+          <div class="eyebrow">Access control</div>
+          <h1 class="view-title">Admin</h1>
+          <p class="view-sub" id="adminSub">Everyone can post jobs and manage their own profile by default. Grant extra powers below.</p>
+        </div>
+        <div class="card"><div id="adminList"></div></div>
+      </section>
+
+      <footer class="foot">
+        <span>© <span id="yr2"></span> <a href="https://www.machinemind.in" target="_blank" rel="noopener">MachineMind</a>® · All rights reserved. M-Working® is a MachineMind® product.</span>
+        <span><a href="mailto:fiberxpool@gmail.com?subject=Found%20you%20on%20M-Working">Contact us</a></span>
+      </footer>
+    </main>
+  </div>
+
+  <nav class="tabbar">
+    <button class="on" data-view="vOverview" type="button"><svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="1.5" width="5.5" height="5.5" rx="1.5"/><rect x="9" y="1.5" width="5.5" height="5.5" rx="1.5"/><rect x="1.5" y="9" width="5.5" height="5.5" rx="1.5"/><rect x="9" y="9" width="5.5" height="5.5" rx="1.5"/></svg>Overview</button>
+    <button data-view="vPost" type="button"><svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 3v10M3 8h10" stroke-linecap="round"/></svg>Post</button>
+    <button data-view="vJobs" type="button"><svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="4.5" width="13" height="9.5" rx="1.5"/><path d="M5.5 4.5V3a1.5 1.5 0 011.5-1.5h2A1.5 1.5 0 0110.5 3v1.5"/></svg>Jobs</button>
+    <button data-view="vCands" type="button"><svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="5" r="2.4"/><path d="M1.5 13.5c0-2.5 2-4 4.5-4s4.5 1.5 4.5 4"/></svg>People</button>
+    <button class="hidden" data-view="vAdmin" id="tabAdmin" type="button"><svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1.5l5.5 2.2v4c0 3.2-2.3 5.6-5.5 6.8-3.2-1.2-5.5-3.6-5.5-6.8v-4z"/></svg>Admin</button>
+  </nav>
+</div>
+
+<div id="toasts"></div>
+<div id="modalHost"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
+         onAuthStateChanged, signOut, sendEmailVerification, reload }
+  from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc, deleteDoc, collection, addDoc,
+         query, orderBy, onSnapshot, serverTimestamp, updateDoc }
+  from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAhWNAnCI0l_d8S1ypYzBO678uiS6j5-Mg",
+  authDomain: "m-working-a526f.firebaseapp.com",
+  projectId: "m-working-a526f",
+  storageBucket: "m-working-a526f.firebasestorage.app",
+  messagingSenderId: "841637667584",
+  appId: "1:841637667584:web:ee5649a0a7bdded85a89e5"
+};
+
+const OWNERS = ["fiberxpool@gmail.com", "ceo@machinemind.in"];
+const MAX_CV_BYTES = 700 * 1024;
+const MAIL_SUBJECT = "Found you on M-Working";
+
+const DOMAINS = ["Web Development","Mobile Development","Data Science","Machine Learning / AI",
+  "DevOps / Cloud","UI/UX Design","Digital Marketing","Cybersecurity","Finance & Accounting",
+  "Human Resources","Sales & Business Development","Content Writing","Graphic Design",
+  "Business Analysis","QA / Testing","Networking","Embedded Systems","Blockchain",
+  "Game Development","Operations","Customer Support","Product Management"];
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+let me = null, cands = [], jobs = [], admins = [], users = [];
+let myCV = null, subs = [];
+let openJobs = new Set(), openCands = new Set();
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const reduceMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function toast(msg, bad){
+  const el = document.createElement("div");
+  el.className = "toast" + (bad ? " bad" : "");
+  el.innerHTML = `<b></b><span>${esc(msg)}</span>`;
+  $("toasts").appendChild(el);
+  setTimeout(() => { el.style.opacity="0"; el.style.transform="translateY(8px)";
+    setTimeout(() => el.remove(), 220); }, bad ? 5200 : 3000);
+}
+
+function confirmDialog(title, body, ok){
+  return new Promise(res => {
+    const host = $("modalHost");
+    host.innerHTML = `<div class="scrim" role="dialog" aria-modal="true"><div class="modal">
+      <h3 class="modal-t">${esc(title)}</h3><p class="modal-b">${esc(body)}</p>
+      <div class="modal-acts"><button class="btn-quiet" data-no type="button">Cancel</button>
+      <button class="btn-danger" data-yes type="button">${esc(ok)}</button></div></div></div>`;
+    const done = v => { host.innerHTML = ""; res(v); };
+    host.querySelector("[data-no]").onclick = () => done(false);
+    host.querySelector("[data-yes]").onclick = () => done(true);
+    host.querySelector(".scrim").onclick = e => { if (e.target.classList.contains("scrim")) done(false); };
+    host.querySelector("[data-yes]").focus();
+  });
+}
+
+const fmtDate = d => d ? new Date(d+"T00:00:00").toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"}) : "—";
+function daysLeft(d){ if(!d) return null; const t=new Date(); t.setHours(0,0,0,0);
+  return Math.round((new Date(d+"T00:00:00") - t)/86400000); }
+const isShut = j => j.archived === true || (daysLeft(j.lastDate) !== null && daysLeft(j.lastDate) < 0);
+const fmtBytes = b => b<1024 ? b+" B" : b<1048576 ? (b/1024).toFixed(0)+" KB" : (b/1048576).toFixed(1)+" MB";
+
+function countUp(el, to){
+  if (reduceMotion()){ el.textContent = to; return; }
+  const t0 = performance.now(), dur = 620;
+  const tick = t => { const p = Math.min(1,(t-t0)/dur);
+    el.textContent = Math.round(to * (1 - Math.pow(1-p,3)));
+    if (p<1) requestAnimationFrame(tick); };
+  requestAnimationFrame(tick);
+}
+
+/* ───── domains helpers (back-compatible with the old single `domain` field) ───── */
+const domsOf = o => Array.isArray(o?.domains) && o.domains.length ? o.domains : (o?.domain ? [o.domain] : []);
+const domsLower = o => domsOf(o).map(d => String(d).toLowerCase());
+function sharedDomains(c, j){
+  const cd = domsOf(c), jd = domsLower(j), hits = [];
+  cd.forEach(d => { const dl = String(d).toLowerCase();
+    if (jd.some(x => x === dl || x.includes(dl) || dl.includes(x))) hits.push(d); });
+  return hits;
+}
+const eligible = (c,j) => sharedDomains(c,j).length > 0 && (c.experienceYears ?? 0) >= (j.minExperience ?? 0);
+function matchesFor(j){
+  return cands.filter(c => eligible(c,j)).map(c => ({ c, hits: sharedDomains(c,j) }))
+    .sort((a,b) => b.hits.length - a.hits.length
+      || (b.c.experienceYears ?? 0) - (a.c.experienceYears ?? 0)
+      || String(a.c.name||"").localeCompare(String(b.c.name||"")));
+}
+
+/* ───── reach links: native mail/phone apps ───── */
+const ICO = {
+  mail:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="3" width="13" height="10" rx="1.5"/><path d="M2 4l6 4.5L14 4"/></svg>',
+  call:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5.2 2.3l1.6 3-1.3 1.4a8 8 0 003.8 3.8l1.4-1.3 3 1.6v2.4c0 .6-.5 1.1-1.1 1A11.7 11.7 0 011.8 3.4c0-.6.4-1.1 1-1.1z"/></svg>',
+  wa:'<svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1.6a6.4 6.4 0 00-5.5 9.6L1.6 14.4l3.3-.9A6.4 6.4 0 108 1.6zm0 1.3a5.1 5.1 0 11-2.6 9.5l-.2-.1-1.9.5.5-1.9-.1-.2A5.1 5.1 0 018 2.9zm-2 2.4c-.1 0-.3 0-.5.2s-.6.6-.6 1.4.6 1.7.7 1.8c.1.2 1.2 1.9 3 2.6 1.4.6 1.7.5 2 .4.3 0 1-.4 1.1-.8.1-.4.1-.8.1-.9l-.5-.2-1-.5c-.1-.1-.2-.1-.3.1l-.5.5c-.1.1-.2.2-.3.1a4.2 4.2 0 01-1.3-.8 4.6 4.6 0 01-.8-1.1c-.1-.2 0-.2.1-.3l.3-.3.2-.3v-.3l-.5-1.2c-.1-.3-.2-.3-.3-.3z"/></svg>',
+  cv:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 1.5H4.5A1.5 1.5 0 003 3v10a1.5 1.5 0 001.5 1.5h7A1.5 1.5 0 0013 13V5.5z"/><path d="M9 1.5V5.5H13"/></svg>',
+  lock:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5.5 7V4.8a2.5 2.5 0 015 0V7"/></svg>',
+  link:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6.5 9.5a3 3 0 004.2 0l2-2a3 3 0 00-4.2-4.2l-.8.8" stroke-linecap="round"/><path d="M9.5 6.5a3 3 0 00-4.2 0l-2 2a3 3 0 004.2 4.2l.8-.8" stroke-linecap="round"/></svg>'
+};
+
+/* mailto: opens the device's default mail app with To + Subject prefilled */
+const mailTo = m => `mailto:${String(m).trim()}?subject=${encodeURIComponent(MAIL_SUBJECT)}`;
+const telTo  = p => "tel:" + String(p).replace(/[^\d+]/g, "");
+function waTo(p){
+  let d = String(p).replace(/\D/g, "");
+  if (d.length === 10) d = "91" + d;
+  else if (d.length === 11 && d.startsWith("0")) d = "91" + d.slice(1);
+  return "https://wa.me/" + d;
+}
+function reachHTML({ mail, phone }){
+  const out = [];
+  if (mail)  out.push(`<a class="reach-btn reach-mail" href="${esc(mailTo(mail))}">${ICO.mail} Email</a>`);
+  if (phone){
+    out.push(`<a class="reach-btn reach-call" href="${esc(telTo(phone))}">${ICO.call} Call</a>`);
+    out.push(`<a class="reach-btn reach-wa" href="${esc(waTo(phone))}" target="_blank" rel="noopener">${ICO.wa} WhatsApp</a>`);
+  }
+  return out.join("");
+}
+function cvButton(c){
+  if (!c.resumeName) return "";
+  const mine = me && c.id === me.uid;
+  const priv = c.resumeVisibility === "private";
+  if (priv && !mine && !perms().manageProfiles)
+    return `<span class="reach-btn locked" title="This candidate keeps their resume private">${ICO.lock} Resume private</span>`;
+  return `<button class="reach-btn reach-cv" data-cv="${esc(c.id)}" type="button">${ICO.cv} Resume</button>`;
+}
+
+/* ───── permissions ─────
+   Baseline for every signed-in user: post jobs, manage own profile.
+   Assignable extras: manageJobs, deleteCandidates, manageProfiles, manageAdmins. */
+function perms(){
+  if (!me) return { owner:false, admin:false, manageJobs:false, deleteCandidates:false, manageProfiles:false, manageAdmins:false };
+  const owner = OWNERS.includes((me.email||"").toLowerCase());
+  const rec = admins.find(a => a.id === me.uid);
+  const p = rec?.permissions || {};
+  return {
+    owner,
+    admin: owner || !!rec,
+    manageJobs:       owner || !!p.manageJobs,
+    deleteCandidates: owner || !!p.deleteCandidates,
+    manageProfiles:   owner || !!p.manageProfiles,
+    manageAdmins:     owner || !!p.manageAdmins
+  };
+}
+function paintRole(){
+  const p = perms();
+  $("navAdmin").classList.toggle("hidden", !p.admin);
+  $("tabAdmin").classList.toggle("hidden", !p.admin);
+  const chip = $("pmChip");
+  if (p.owner){ chip.textContent = "Owner"; chip.className = "chip chip-owner"; }
+  else if (p.admin){ chip.textContent = "Admin"; chip.className = "chip chip-admin"; }
+  else chip.className = "chip hidden";
+}
+
+/* ───── multi-select ───── */
+function makeMultiSelect(hostId, placeholder){
+  const host = $(hostId);
+  let picked = [];
+  let opts = [...DOMAINS];
+  host.className = "msel";
+  host.innerHTML = `
+    <button class="msel-trigger" type="button" aria-haspopup="listbox" aria-expanded="false"></button>
+    <div class="msel-pop" role="listbox">
+      <div class="msel-opts"></div>
+      <div class="msel-add">
+        <input type="text" placeholder="Add a different domain" aria-label="Add a custom domain" />
+        <button type="button">Add</button>
+      </div>
+    </div>`;
+  const trigger = host.querySelector(".msel-trigger");
+  const optBox  = host.querySelector(".msel-opts");
+  const addInp  = host.querySelector(".msel-add input");
+  const addBtn  = host.querySelector(".msel-add button");
+
+  function paint(){
+    trigger.innerHTML = picked.length
+      ? picked.map(d => `<span class="msel-chip">${esc(d)}<i data-x="${esc(d)}" role="button" aria-label="Remove ${esc(d)}">×</i></span>`).join("")
+      : `<span class="msel-ph">${esc(placeholder)}</span>`;
+    optBox.innerHTML = opts.map(d => `
+      <label class="msel-opt ${picked.includes(d) ? "sel" : ""}">
+        <input type="checkbox" value="${esc(d)}" ${picked.includes(d) ? "checked" : ""}/>
+        <span>${esc(d)}</span>
+      </label>`).join("");
+  }
+  trigger.onclick = e => {
+    if (e.target.dataset.x){ picked = picked.filter(d => d !== e.target.dataset.x); paint(); return; }
+    const wasOpen = host.classList.contains("open");
+    document.querySelectorAll(".msel.open").forEach(m => m.classList.remove("open"));
+    host.classList.toggle("open", !wasOpen);
+    trigger.setAttribute("aria-expanded", String(!wasOpen));
+  };
+  optBox.onchange = e => {
+    const v = e.target.value;
+    if (e.target.checked){ if (!picked.includes(v)) picked.push(v); }
+    else picked = picked.filter(d => d !== v);
+    paint();
+  };
+  function addCustom(){
+    const v = addInp.value.trim();
+    if (!v) return;
+    if (!opts.some(o => o.toLowerCase() === v.toLowerCase())) opts.push(v);
+    if (!picked.some(o => o.toLowerCase() === v.toLowerCase())) picked.push(v);
+    addInp.value = ""; paint();
+  }
+  addBtn.onclick = addCustom;
+  addInp.onkeydown = e => { if (e.key === "Enter"){ e.preventDefault(); addCustom(); } };
+  paint();
+  return {
+    get: () => [...picked],
+    set: (arr) => {
+      picked = Array.isArray(arr) ? [...arr] : [];
+      picked.forEach(d => { if (!opts.some(o => o.toLowerCase() === String(d).toLowerCase())) opts.push(d); });
+      paint();
+    },
+    clear: () => { picked = []; paint(); }
+  };
+}
+document.addEventListener("click", e => {
+  if (!e.target.closest(".msel")) document.querySelectorAll(".msel.open").forEach(m => m.classList.remove("open"));
+  if (!e.target.closest("#pmenu")) $("pmenu").classList.remove("open");
+});
+
+const mselProfile = makeMultiSelect("mselProfile", "Select your domains…");
+const mselJob     = makeMultiSelect("mselJob", "Select relevant domains…");
+
+/* ───── auth ───── */
+$("segIn").onclick = () => { $("segIn").classList.add("on"); $("segUp").classList.remove("on");
+  $("formIn").classList.remove("hidden"); $("formUp").classList.add("hidden"); };
+$("segUp").onclick = () => { $("segUp").classList.add("on"); $("segIn").classList.remove("on");
+  $("formUp").classList.remove("hidden"); $("formIn").classList.add("hidden"); };
+
+function authErr(e){
+  const c = e.code || "";
+  if (c.includes("email-already-in-use")) return "That email already has an account — log in instead.";
+  if (c.includes("invalid-email"))        return "That doesn't look like a valid email address.";
+  if (c.includes("weak-password"))        return "Use at least 6 characters.";
+  if (c.includes("wrong-password") || c.includes("invalid-credential")) return "Incorrect email or password.";
+  if (c.includes("user-not-found"))       return "No account found with that email.";
+  if (c.includes("too-many-requests"))    return "Too many attempts. Wait a minute, then try again.";
+  if (c.includes("operation-not-allowed"))return "Email/password sign-in isn't switched on in Firebase yet.";
+  if (c.includes("unauthorized-domain"))  return "This domain isn't authorised in Firebase Authentication settings.";
+  return e.message || "Something went wrong. Try again.";
+}
+
+$("formIn").onsubmit = async e => {
+  e.preventDefault(); $("msgIn").textContent = "";
+  try { await signInWithEmailAndPassword(auth, $("inMail").value.trim(), $("inPass").value); }
+  catch(err){ $("msgIn").textContent = authErr(err); }
+};
+$("formUp").onsubmit = async e => {
+  e.preventDefault();
+  const box = $("msgUp"); box.className = "form-msg"; box.textContent = "";
+  try {
+    const cred = await createUserWithEmailAndPassword(auth, $("upMail").value.trim(), $("upPass").value);
+    try { await sendEmailVerification(cred.user); } catch(_){}
+    box.className = "form-msg good";
+    box.textContent = "Account created. Check your inbox for the verification link.";
+  } catch(err){ box.textContent = authErr(err); }
+};
+
+/* profile menu */
+$("pmenuBtn").onclick = e => {
+  e.stopPropagation();
+  const m = $("pmenu"); m.classList.toggle("open");
+  $("pmenuBtn").setAttribute("aria-expanded", String(m.classList.contains("open")));
+};
+$("pmOut").onclick = () => signOut(auth);
+$("pmVerify").onclick = () => resendVerify();
+$("vbResend").onclick = () => resendVerify();
+$("vbCheck").onclick = async () => {
+  try { await reload(auth.currentUser); me = auth.currentUser; paintVerify();
+    toast(me.emailVerified ? "Email verified. Thanks." : "Still not verified — click the link in your inbox first.", !me.emailVerified);
+  } catch(e){ toast("Couldn't refresh: " + e.message, true); }
+};
+async function resendVerify(){
+  if (!auth.currentUser) return;
+  if (auth.currentUser.emailVerified) return toast("Your email is already verified.");
+  try { await sendEmailVerification(auth.currentUser); toast("Verification link sent."); }
+  catch(e){ toast("Couldn't send: " + e.message, true); }
+}
+function paintVerify(){
+  const verified = !!me?.emailVerified;
+  const p = perms();
+  $("verifyBanner").classList.toggle("hidden", verified);
+  $("pmVerify").classList.toggle("hidden", verified);
+  $("vbMail").textContent = me?.email || "";
+  const canPost = verified || p.owner;
+  $("jSubmit").disabled = !canPost;
+  $("msgJob").textContent = canPost ? "" : "Verify your email address to post an opening.";
+}
+
+/* ───── navigation ───── */
+let switching = false;
+function go(viewId){
+  const next = $(viewId);
+  const cur = document.querySelector(".view:not(.hidden)");
+  document.querySelectorAll("[data-view]").forEach(b => b.classList.toggle("on", b.dataset.view === viewId));
+  $("pmenu").classList.remove("open");
+  if (cur === next){ window.scrollTo({top:0,behavior:"instant"}); return; }
+  if (switching) return;
+  if (!cur || reduceMotion()){
+    document.querySelectorAll(".view").forEach(v => v.classList.add("hidden"));
+    next.classList.remove("hidden"); window.scrollTo({top:0,behavior:"instant"}); return;
+  }
+  switching = true;
+  cur.classList.add("view-out");
+  setTimeout(() => {
+    cur.classList.add("hidden"); cur.classList.remove("view-out");
+    next.classList.remove("hidden"); next.classList.add("view-in");
+    window.scrollTo({top:0,behavior:"instant"});
+    requestAnimationFrame(() => requestAnimationFrame(() => next.classList.add("view-in-active")));
+    setTimeout(() => { next.classList.remove("view-in","view-in-active"); switching = false; }, 460);
+  }, 190);
+}
+document.querySelectorAll("[data-view]").forEach(b => b.onclick = () => go(b.dataset.view));
+
+/* ───── session ───── */
+onAuthStateChanged(auth, async user => {
+  me = user;
+  if (!user){
+    $("appView").classList.add("hidden"); $("authView").classList.remove("hidden");
+    subs.forEach(u => u && u()); subs = [];
+    cands = []; jobs = []; admins = []; users = []; myCV = null;
+    openJobs.clear(); openCands.clear();
+    return;
+  }
+  $("authView").classList.add("hidden"); $("appView").classList.remove("hidden");
+  $("pmMail").textContent = user.email;
+  $("pmAvatar").textContent = (user.email || "?").charAt(0).toUpperCase();
+  $("ovGreet").textContent = OWNERS.includes((user.email||"").toLowerCase()) ? "Control room" : "Overview";
+  paintRole(); paintVerify();
+  await touchUser(); await loadProfile();
+  listen(); go("vOverview");
+});
+
+async function touchUser(){
+  try { await setDoc(doc(db,"users",me.uid), { email: me.email, lastLogin: serverTimestamp() }, { merge:true }); }
+  catch(e){ console.warn("users write blocked:", e.message); }
+}
+
+function listen(){
+  subs.forEach(u => u && u()); subs = [];
+  subs.push(onSnapshot(collection(db,"candidates"), s => {
+    cands = s.docs.map(d => ({ id:d.id, ...d.data() }));
+    renderJobs(); renderOverview(); renderCands(); renderAdmin();
+  }, e => toast("Candidates: " + e.message, true)));
+
+  subs.push(onSnapshot(query(collection(db,"jobs"), orderBy("createdAt","desc")), s => {
+    jobs = s.docs.map(d => ({ id:d.id, ...d.data() }));
+    renderJobs(); renderOverview();
+  }, e => toast("Openings: " + e.message, true)));
+
+  subs.push(onSnapshot(collection(db,"admins"), s => {
+    admins = s.docs.map(d => ({ id:d.id, ...d.data() }));
+    paintRole(); paintVerify(); renderJobs(); renderCands(); renderAdmin();
+  }, e => { console.warn("admins read blocked:", e.message);
+    if (perms().owner) toast("Admin list unreadable — publish the latest firestore.rules.", true); }));
+
+  subs.push(onSnapshot(collection(db,"users"), s => {
+    users = s.docs.map(d => ({ id:d.id, ...d.data() })); renderAdmin();
+  }, e => console.warn("users read blocked:", e.message)));
+}
+
+/* ───── profile ───── */
+async function loadProfile(){
+  try{
+    const snap = await getDoc(doc(db,"candidates", me.uid));
+    if (!snap.exists()){ paintCV(); return; }
+    const d = snap.data();
+    $("pName").value = d.name || "";
+    $("pExp").value = d.experienceYears ?? "";
+    $("pPhone").value = d.phone || "";
+    $("pNotice").value = d.noticePeriod || "";
+    mselProfile.set(domsOf(d));
+    myCV = d.resumeName ? { fileName:d.resumeName, size:d.resumeSize||0, visibility:d.resumeVisibility||"public" } : null;
+    paintCV();
+  } catch(e){ toast("Couldn't load your profile: " + e.message, true); }
+}
+
+$("formProfile").onsubmit = async e => {
+  e.preventDefault();
+  const doms = mselProfile.get();
+  if (!doms.length) return toast("Pick at least one domain.", true);
+  try{
+    await setDoc(doc(db,"candidates", me.uid), {
+      name: $("pName").value.trim(),
+      experienceYears: parseFloat($("pExp").value) || 0,
+      domains: doms,
+      domainsLower: doms.map(d => d.toLowerCase()),
+      phone: $("pPhone").value.trim(),
+      noticePeriod: $("pNotice").value,
+      email: me.email,
+      updatedAt: serverTimestamp()
+    }, { merge:true });
+    $("pSaved").textContent = "Saved";
+    setTimeout(() => $("pSaved").textContent = "", 2600);
+    toast("Profile saved.");
+  } catch(err){ toast("Couldn't save: " + err.message, true); }
+};
+
+/* ───── resume ───── */
+function paintCV(){
+  const has = !!myCV;
+  $("cvEmpty").classList.toggle("hidden", has);
+  $("cvFilled").classList.toggle("hidden", !has);
+  if (!has) return;
+  $("cvName").textContent = myCV.fileName;
+  $("cvSize").textContent = fmtBytes(myCV.size);
+  const vis = myCV.visibility || "public";
+  document.querySelectorAll("#cvVis button").forEach(b => b.classList.toggle("on", b.dataset.vis === vis));
+  $("cvVisNote").textContent = vis === "private"
+    ? "Recruiters see a “Resume private” marker instead of a download button. You and admins can still open it."
+    : "Anyone signed in who sees you as an eligible candidate can open your resume.";
+}
+$("cvDrop").onclick = () => $("cvInput").click();
+$("cvDrop").onkeydown = e => { if (e.key==="Enter"||e.key===" "){ e.preventDefault(); $("cvInput").click(); } };
+$("cvSwap").onclick = () => $("cvInput").click();
+["dragenter","dragover"].forEach(ev => $("cvDrop").addEventListener(ev, e => { e.preventDefault(); $("cvDrop").classList.add("over"); }));
+["dragleave","drop"].forEach(ev => $("cvDrop").addEventListener(ev, e => { e.preventDefault(); $("cvDrop").classList.remove("over"); }));
+$("cvDrop").addEventListener("drop", e => { if (e.dataTransfer.files[0]) handleCV(e.dataTransfer.files[0]); });
+$("cvInput").onchange = e => { if (e.target.files[0]) handleCV(e.target.files[0]); e.target.value = ""; };
+
+const fileToB64 = file => new Promise((res,rej) => {
+  const r = new FileReader();
+  r.onload = () => res(String(r.result).split(",")[1]);
+  r.onerror = () => rej(new Error("Couldn't read that file."));
+  r.readAsDataURL(file);
+});
+
+async function handleCV(file){
+  if (!/\.(pdf|docx?)$/i.test(file.name)) return toast("Use a PDF, DOC or DOCX file.", true);
+  if (file.size > MAX_CV_BYTES) return toast(`That file is ${fmtBytes(file.size)}. The limit is 700 KB — compress it and try again.`, true);
+  if (!$("pName").value.trim() || !mselProfile.get().length) return toast("Fill in your name and domains, save the profile, then upload.", true);
+  toast("Uploading resume…");
+  try{
+    const b64 = await fileToB64(file);
+    const vis = myCV?.visibility || "public";
+    await setDoc(doc(db,"resumes", me.uid), {
+      ownerUid: me.uid, fileName: file.name, mime: file.type || "application/octet-stream",
+      size: file.size, visibility: vis, data: b64, updatedAt: serverTimestamp()
+    });
+    await setDoc(doc(db,"candidates", me.uid),
+      { resumeName:file.name, resumeSize:file.size, resumeVisibility:vis, updatedAt:serverTimestamp() }, { merge:true });
+    myCV = { fileName:file.name, size:file.size, visibility:vis };
+    paintCV(); toast("Resume uploaded.");
+  } catch(e){ toast("Upload failed: " + e.message, true); }
+}
+
+document.querySelectorAll("#cvVis button").forEach(b => b.onclick = async () => {
+  const vis = b.dataset.vis;
+  if (!myCV || myCV.visibility === vis) return;
+  try{
+    await updateDoc(doc(db,"resumes", me.uid), { visibility: vis });
+    await setDoc(doc(db,"candidates", me.uid), { resumeVisibility: vis }, { merge:true });
+    myCV.visibility = vis; paintCV();
+    toast(vis === "private" ? "Resume set to private." : "Resume set to visible.");
+  } catch(e){ toast("Couldn't change visibility: " + e.message, true); }
+});
+
+$("cvKill").onclick = async () => {
+  if (!await confirmDialog("Remove resume?","Recruiters will stop seeing a resume button on your profile.","Remove")) return;
+  try{
+    await deleteDoc(doc(db,"resumes", me.uid));
+    await setDoc(doc(db,"candidates", me.uid), { resumeName:null, resumeSize:null, resumeVisibility:null }, { merge:true });
+    myCV = null; paintCV(); toast("Resume removed.");
+  } catch(e){ toast("Couldn't remove: " + e.message, true); }
+};
+$("cvView").onclick = () => openCV(me.uid);
+
+async function openCV(uid){
+  try{
+    const snap = await getDoc(doc(db,"resumes", uid));
+    if (!snap.exists()) return toast("That resume is no longer available.", true);
+    const d = snap.data();
+    const bin = atob(d.data);
+    const buf = new Uint8Array(bin.length);
+    for (let i=0;i<bin.length;i++) buf[i] = bin.charCodeAt(i);
+    const url = URL.createObjectURL(new Blob([buf], { type: d.mime || "application/octet-stream" }));
+    const w = window.open(url, "_blank");
+    if (!w){ const a = document.createElement("a"); a.href = url; a.download = d.fileName || "resume"; a.click(); }
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  } catch(e){
+    toast(e.code === "permission-denied" ? "This candidate keeps their resume private." : "Couldn't open resume: " + e.message, true);
+  }
+}
+
+/* ───── post job ───── */
+$("formJob").onsubmit = async e => {
+  e.preventDefault();
+  const box = $("msgJob"); box.className = "form-msg"; box.textContent = "";
+  if (!me.emailVerified && !perms().owner){ box.textContent = "Verify your email address to post an opening."; return; }
+  const mail = $("jMail").value.trim(), phone = $("jPhone").value.trim();
+  if (!mail && !phone){ box.textContent = "Add a contact email or number so candidates can reach you."; return; }
+  const doms = mselJob.get();
+  if (!doms.length){ box.textContent = "Pick at least one relevant domain."; return; }
+  try{
+    await addDoc(collection(db,"jobs"), {
+      postedByUid: me.uid, postedByEmail: me.email,
+      role: $("jRole").value.trim(), company: $("jOrg").value.trim(),
+      location: $("jLoc").value.trim(),
+      domains: doms, domainsLower: doms.map(d => d.toLowerCase()),
+      minExperience: parseFloat($("jMin").value) || 0,
+      sourceUrl: $("jSrc").value.trim(),
+      eligibilityNotes: $("jNotes").value.trim(),
+      contactEmail: mail, contactNumber: phone,
+      lastDate: $("jDate").value, archived: false, createdAt: serverTimestamp()
+    });
+    $("formJob").reset(); $("jMin").value = 0; mselJob.clear();
+    toast("Opening posted."); go("vJobs");
+  } catch(err){ box.textContent = "Couldn't post: " + err.message; }
+};
+
+/* ───── overview ───── */
+function renderOverview(){
+  const open = jobs.filter(j => !isShut(j));
+  const soon = open.filter(j => { const d = daysLeft(j.lastDate); return d !== null && d <= 7; });
+  const mine = jobs.filter(j => me && j.postedByUid === me.uid);
+  countUp($("stOpen"), open.length); countUp($("stCands"), cands.length);
+  countUp($("stMine"), mine.length); countUp($("stSoon"), soon.length);
+  $("navJobCount").textContent = open.length;
+  $("navCandCount").textContent = cands.length;
+
+  const mp = cands.find(c => me && c.id === me.uid);
+  const box = $("ovMatches");
+  if (!mp){ box.innerHTML = `<div class="void-box void-sm">Fill in your profile and the openings you qualify for will be listed here.</div>`; return; }
+  const fit = open.filter(j => eligible(mp, j));
+  if (!fit.length){
+    box.innerHTML = `<div class="void-box void-sm">Nothing matches your domains at ${esc(mp.experienceYears ?? 0)} yr(s) yet. New postings appear here automatically.</div>`;
+    return;
+  }
+  box.innerHTML = fit.map(j => `
+    <div class="cand">
+      <div class="cand-top">
+        <div><div class="cand-nm">${esc(j.role)}</div>
+        <div class="cand-meta">${esc(j.company || "Company not disclosed")} · ${esc(j.location)}</div></div>
+        <div class="cand-meta">Apply by ${fmtDate(j.lastDate)}</div>
+      </div>
+      <div class="cand-tags">${sharedDomains(mp,j).map(d => `<span class="tag hit">${esc(d)}</span>`).join("")}</div>
+      <div class="cand-reach reach">${reachHTML({ mail:j.contactEmail, phone:j.contactNumber })}
+        ${j.sourceUrl ? `<a class="reach-btn reach-src" href="${esc(j.sourceUrl)}" target="_blank" rel="noopener">${ICO.link} Source</a>` : ""}</div>
+    </div>`).join("");
+}
+
+/* ───── jobs board ───── */
+$("showShut").onchange = renderJobs;
+$("jobSearch").oninput = renderJobs;
+
+function axisHTML(job){
+  const pool = cands.filter(c => sharedDomains(c, job).length);
+  if (!pool.length) return "";
+  const gate = job.minExperience ?? 0;
+  const top = Math.max(gate + 1, ...pool.map(c => c.experienceYears ?? 0)) || 1;
+  const pct = v => Math.min(100, Math.max(0, (v/top)*100));
+  const dots = pool.map(c => {
+    const v = c.experienceYears ?? 0;
+    return `<span class="dot ${v>=gate?"in":"out"}" style="left:${pct(v)}%" title="${esc(c.name)} — ${esc(v)} yr(s)"></span>`;
+  }).join("");
+  return `<div class="axis-cap">
+      <span class="axis-ttl">Experience spread</span>
+      <span class="axis-key"><i><b style="background:var(--blue)"></b>eligible</i><i><b style="background:var(--faint)"></b>below bar</i></span>
+    </div>
+    <div class="axis"><div class="axis-line"></div>
+      <div class="axis-fill" style="left:${pct(gate)}%;right:0"></div>
+      <div class="axis-gate" style="left:${pct(gate)}%" data-lab="${esc(gate)} yr bar"></div>${dots}</div>
+    <div class="axis-scale"><span>0 yr</span><span>${esc(top)} yr</span></div>`;
+}
+
+function candRowHTML(c, hits, rank){
+  const p = perms();
+  return `<div class="cand">
+    <div class="cand-top">
+      <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap">
+        <span class="cand-nm">${esc(c.name)}</span>
+        ${rank === 0 ? `<span class="rank">Best match</span>` : ""}
+      </div>
+      <div class="cand-meta">${esc(c.experienceYears ?? 0)} yr${(c.experienceYears==1)?"":"s"} · ${hits.length} domain${hits.length===1?"":"s"} matched</div>
+    </div>
+    <div class="cand-tags">
+      ${hits.map(d => `<span class="tag hit">${esc(d)}</span>`).join("")}
+      ${domsOf(c).filter(d => !hits.includes(d)).map(d => `<span class="tag">${esc(d)}</span>`).join("")}
+      ${c.noticePeriod ? `<span class="tag notice">Notice · ${esc(c.noticePeriod)}</span>` : ""}
+    </div>
+    <div class="cand-reach reach">
+      ${reachHTML({ mail:c.email, phone:c.phone })}
+      ${cvButton(c)}
+      ${p.deleteCandidates ? `<button class="reach-btn" data-wipe="${esc(c.id)}" type="button">Remove profile</button>` : ""}
+    </div>
+  </div>`;
+}
+
+function renderJobs(){
+  const p = perms();
+  $("jobsSub").textContent = `${cands.length} candidate${cands.length===1?"":"s"} in the pool · ${jobs.filter(j=>!isShut(j)).length} open`;
+  const q = ($("jobSearch").value || "").trim().toLowerCase();
+  let list = jobs.filter(j => $("showShut").checked || !isShut(j));
+  if (q) list = list.filter(j =>
+    [j.role, j.company, j.location, ...domsOf(j)].filter(Boolean).join(" ").toLowerCase().includes(q));
+
+  if (!list.length){
+    $("jobsList").innerHTML = `<div class="void-box">
+      <div class="void-t">${q ? "Nothing matches that search" : "No open postings yet"}</div>
+      ${q ? "Try a different role, company or domain." : "Post the first opening, or tick “Show closed” to see past listings."}</div>`;
+    return;
+  }
+
+  $("jobsList").innerHTML = list.map((j,i) => {
+    const shut = isShut(j), dLeft = daysLeft(j.lastDate);
+    const canEdit = (me && j.postedByUid === me.uid) || p.manageJobs;
+    const ranked = shut ? [] : matchesFor(j);
+    const isOpen = openJobs.has(j.id);
+
+    const tally = shut
+      ? `<div class="tally shut"><span class="tally-n">Closed</span></div>`
+      : `<div class="tally ${ranked.length?"":"none"}"><div class="tally-n">${ranked.length}</div><div class="tally-l">eligible</div></div>`;
+
+    let inner;
+    if (shut) inner = `<div class="void-box void-sm">This posting is closed. Matching is no longer shown.</div>`;
+    else if (ranked.length) inner = axisHTML(j) + `<div style="margin-top:14px">${ranked.map((m,ix) => candRowHTML(m.c, m.hits, ix)).join("")}</div>`;
+    else inner = axisHTML(j) + `<div class="void-box void-sm">No one in the pool clears ${esc(j.minExperience ?? 0)} yr(s) in these domains yet.</div>`;
+
+    return `<article class="job ${shut?"shut":""} rise" style="animation-delay:${Math.min(i*45,300)}ms">
+      <div class="job-hd">
+        <div><h3 class="job-role">${esc(j.role)}</h3>
+        <div class="job-org ${j.company?"":"anon"}">${esc(j.company || "Company not disclosed")}</div></div>
+        ${tally}
+      </div>
+      <div class="facts">
+        <span class="fact"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 14.5s5-4 5-8A5 5 0 003 6.5c0 4 5 8 5 8z"/><circle cx="8" cy="6.3" r="1.8"/></svg>${esc(j.location)}</span>
+        <span class="fact"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 12l3.5-4 3 2.5L14 4" stroke-linecap="round" stroke-linejoin="round"/></svg>${esc(j.minExperience ?? 0)}+ yr</span>
+        <span class="fact ${!shut && dLeft!==null && dLeft<=7 ? "due-soon":""}"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M2 6.5h12M5.5 1.5v3M10.5 1.5v3"/></svg>${
+          shut ? "Closed " + fmtDate(j.lastDate) : dLeft===0 ? "Closes today" : dLeft===1 ? "1 day left"
+          : dLeft<=7 ? dLeft + " days left" : "Apply by " + fmtDate(j.lastDate)}</span>
+        ${domsOf(j).map(d => `<span class="dom-tag">${esc(d)}</span>`).join("")}
+      </div>
+      <div class="reach" style="margin-top:14px">
+        ${reachHTML({ mail:j.contactEmail, phone:j.contactNumber })}
+        ${j.sourceUrl ? `<a class="reach-btn reach-src" href="${esc(j.sourceUrl)}" target="_blank" rel="noopener">${ICO.link} Source / reference</a>` : ""}
+      </div>
+      <button class="expander ${isOpen?"open":""}" data-expand="${j.id}" type="button" aria-expanded="${isOpen}">
+        <span>${isOpen ? "Hide full detail" : "Show full detail"}</span>
+        <svg viewBox="0 0 12 8" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M1 1l5 5 5-5" stroke-linecap="round"/></svg>
+      </button>
+      <div class="drawer ${isOpen?"open":""}">
+        <div class="drawer-in">
+          ${j.eligibilityNotes ? `<p class="job-note">${esc(j.eligibilityNotes)}</p>` : ""}
+          ${inner}
+          ${canEdit ? `<div style="display:flex;gap:9px;justify-content:flex-end;margin-top:18px">
+            ${!shut ? `<button class="btn-quiet" data-shut="${j.id}" type="button">Archive now</button>` : ""}
+            <button class="btn-danger" data-kill="${j.id}" type="button">Delete</button></div>` : ""}
+        </div>
+      </div>
+    </article>`;
+  }).join("");
+}
+
+/* ───── candidates page ───── */
+$("candSearch").oninput = renderCands;
+
+function renderCands(){
+  const p = perms();
+  $("candsSub").textContent = `${cands.length} candidate${cands.length===1?"":"s"} registered. Tap any profile to open it.`;
+  const q = ($("candSearch").value || "").trim().toLowerCase();
+  let list = [...cands].sort((a,b) => String(a.name||"").localeCompare(String(b.name||"")));
+  if (q) list = list.filter(c => [c.name, ...domsOf(c)].filter(Boolean).join(" ").toLowerCase().includes(q));
+
+  if (!list.length){
+    $("candsList").innerHTML = `<div class="void-box"><div class="void-t">${q ? "No one matches that search" : "No candidates yet"}</div>
+      ${q ? "Try a different name or domain." : "Profiles appear here as people fill them in."}</div>`;
+    return;
+  }
+
+  $("candsList").innerHTML = list.map((c,i) => {
+    const isOpen = openCands.has(c.id);
+    const mine = me && c.id === me.uid;
+    return `<div class="clist-item ${isOpen?"open":""} rise" style="animation-delay:${Math.min(i*35,260)}ms">
+      <button class="clist-hd" data-cand="${esc(c.id)}" type="button" aria-expanded="${isOpen}">
+        <span class="avatar">${esc(String(c.name||"?").charAt(0).toUpperCase())}</span>
+        <span style="min-width:0">
+          <span class="clist-nm">${esc(c.name || "Unnamed")}${mine ? " · you" : ""}</span>
+          <span class="clist-sub">${esc(c.experienceYears ?? 0)} yr${(c.experienceYears==1)?"":"s"} · ${domsOf(c).length} domain${domsOf(c).length===1?"":"s"}</span>
+        </span>
+        <svg class="clist-caret" viewBox="0 0 12 8" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M1 1l5 5 5-5" stroke-linecap="round"/></svg>
+      </button>
+      <div class="clist-body"><div class="clist-inner">
+        <div class="detail-grid">
+          <div><div class="detail-k">Experience</div><div class="detail-v">${esc(c.experienceYears ?? 0)} year${(c.experienceYears==1)?"":"s"}</div></div>
+          <div><div class="detail-k">Notice period</div><div class="detail-v">${esc(c.noticePeriod || "Not specified")}</div></div>
+          <div><div class="detail-k">Email</div><div class="detail-v" style="word-break:break-all">${esc(c.email || "—")}</div></div>
+          <div><div class="detail-k">Phone</div><div class="detail-v">${esc(c.phone || "—")}</div></div>
+        </div>
+        <div class="detail-k">Domains</div>
+        <div class="cand-tags" style="margin-bottom:16px">${domsOf(c).map(d => `<span class="tag">${esc(d)}</span>`).join("") || `<span class="tag">None listed</span>`}</div>
+        <div class="reach">
+          ${reachHTML({ mail:c.email, phone:c.phone })}
+          ${cvButton(c)}
+          ${p.deleteCandidates && !mine ? `<button class="reach-btn" data-wipe="${esc(c.id)}" type="button">Remove profile</button>` : ""}
+        </div>
+      </div></div>
+    </div>`;
+  }).join("");
+}
+
+/* ───── delegated clicks ───── */
+document.addEventListener("click", async e => {
+  const exp = e.target.closest("[data-expand]");
+  const cd  = e.target.closest("[data-cand]");
+  const cv  = e.target.closest("[data-cv]");
+  const kill= e.target.closest("[data-kill]");
+  const shut= e.target.closest("[data-shut]");
+  const wipe= e.target.closest("[data-wipe]");
+
+  if (exp){
+    const id = exp.dataset.expand;
+    const card = exp.closest(".job");
+    const drawer = card.querySelector(".drawer");
+    const nowOpen = !openJobs.has(id);
+    if (nowOpen) openJobs.add(id); else openJobs.delete(id);
+    drawer.classList.toggle("open", nowOpen);
+    exp.classList.toggle("open", nowOpen);
+    exp.setAttribute("aria-expanded", String(nowOpen));
+    exp.querySelector("span").textContent = nowOpen ? "Hide full detail" : "Show full detail";
+    return;
+  }
+  if (cd){
+    const id = cd.dataset.cand;
+    const item = cd.closest(".clist-item");
+    const nowOpen = !openCands.has(id);
+    if (nowOpen) openCands.add(id); else openCands.delete(id);
+    item.classList.toggle("open", nowOpen);
+    cd.setAttribute("aria-expanded", String(nowOpen));
+    return;
+  }
+  if (cv) return openCV(cv.dataset.cv);
+  if (shut){
+    try { await updateDoc(doc(db,"jobs", shut.dataset.shut), { archived:true }); toast("Opening archived."); }
+    catch(err){ toast("Couldn't archive: " + err.message, true); }
+    return;
+  }
+  if (kill){
+    if (!await confirmDialog("Delete this opening?","It disappears for everyone and can't be restored.","Delete")) return;
+    try { await deleteDoc(doc(db,"jobs", kill.dataset.kill)); toast("Opening deleted."); }
+    catch(err){ toast("Couldn't delete: " + err.message, true); }
+    return;
+  }
+  if (wipe){
+    if (!await confirmDialog("Remove this profile?","The candidate's entry and resume are deleted from the register.","Remove")) return;
+    try{
+      await deleteDoc(doc(db,"candidates", wipe.dataset.wipe));
+      try { await deleteDoc(doc(db,"resumes", wipe.dataset.wipe)); } catch(_){}
+      toast("Profile removed.");
+    } catch(err){ toast("Couldn't remove: " + err.message, true); }
+  }
+});
+
+/* ───── admin ───── */
+function renderAdmin(){
+  const p = perms();
+  if (!p.admin) return;
+  $("adminSub").textContent = p.manageAdmins
+    ? "Everyone can post jobs and manage their own profile by default. Tick extra powers below, then apply."
+    : "You have admin access, but not permission to change other people's access.";
+
+  const map = new Map();
+  users.forEach(u => map.set(u.id, { uid:u.id, email:u.email }));
+  cands.forEach(c => {
+    const row = map.get(c.id) || { uid:c.id, email:c.email };
+    row.name = c.name; row.email = row.email || c.email; map.set(c.id, row);
+  });
+  const people = [...map.values()].sort((a,b) => (a.name||a.email||"").localeCompare(b.name||b.email||""));
+
+  if (!people.length){ $("adminList").innerHTML = `<div class="void-box void-sm">No one has signed in yet.</div>`; return; }
+
+  $("adminList").innerHTML = people.map(x => {
+    const owner = OWNERS.includes((x.email||"").toLowerCase());
+    const rec = admins.find(a => a.id === x.uid);
+    const pr = rec?.permissions || {};
+    const dis = p.manageAdmins ? "" : "disabled";
+
+    const baseline = `<div class="perm-note">Granted to everyone by default</div>
+      <div class="perms" style="margin-bottom:12px">
+        <label class="perm base"><input type="checkbox" checked disabled /><span>Create jobs</span></label>
+        <label class="perm base"><input type="checkbox" checked disabled /><span>Manage own profile</span></label>
+      </div>`;
+
+    if (owner) return `<div class="arow">
+      <div class="arow-hd">
+        <div class="arow-id"><div class="arow-nm">${esc(x.name || x.email)}</div>
+        <div class="arow-em">${esc(x.email)}</div></div>
+        <span class="chip chip-owner">Owner · full access</span>
+      </div>${baseline}</div>`;
+
+    return `<div class="arow" data-uid="${esc(x.uid)}">
+      <div class="arow-hd">
+        <div class="arow-id"><div class="arow-nm">${esc(x.name || x.email)}</div>
+        <div class="arow-em">${esc(x.email)}</div></div>
+        ${p.manageAdmins ? `<button class="btn-quiet" data-apply="${esc(x.uid)}" type="button">Apply changes</button>` : ""}
+      </div>
+      ${baseline}
+      <div class="perm-note">Extra permissions</div>
+      <div class="perms">
+        <label class="perm"><input type="checkbox" data-p="manageJobs" ${pr.manageJobs?"checked":""} ${dis}/><span>Edit / delete / archive jobs</span></label>
+        <label class="perm"><input type="checkbox" data-p="deleteCandidates" ${pr.deleteCandidates?"checked":""} ${dis}/><span>Delete candidate profiles</span></label>
+        <label class="perm"><input type="checkbox" data-p="manageProfiles" ${pr.manageProfiles?"checked":""} ${dis}/><span>Manage others' profiles</span></label>
+        <label class="perm"><input type="checkbox" data-p="manageAdmins" ${pr.manageAdmins?"checked":""} ${dis}/><span>Grant access to others</span></label>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+$("adminList").addEventListener("click", async e => {
+  const btn = e.target.closest("[data-apply]");
+  if (!btn) return;
+  const uid = btn.dataset.apply;
+  const row = btn.closest(".arow");
+  const permissions = {
+    manageJobs:       row.querySelector('[data-p="manageJobs"]').checked,
+    deleteCandidates: row.querySelector('[data-p="deleteCandidates"]').checked,
+    manageProfiles:   row.querySelector('[data-p="manageProfiles"]').checked,
+    manageAdmins:     row.querySelector('[data-p="manageAdmins"]').checked
+  };
+  const any = Object.values(permissions).some(Boolean);
+  const who = users.find(u => u.id === uid) || cands.find(c => c.id === uid);
+  try{
+    if (any){
+      await setDoc(doc(db,"admins", uid), {
+        email: who?.email || "", name: who?.name || "",
+        permissions, grantedBy: me.email, updatedAt: serverTimestamp()
+      });
+      toast("Access updated.");
+    } else { await deleteDoc(doc(db,"admins", uid)); toast("Extra access revoked."); }
+  } catch(err){ toast("Couldn't update access: " + err.message, true); }
+});
+
+/* ───── footer year ───── */
+(() => { const y = new Date().getFullYear();
+  const a = $("yr1"), b = $("yr2"); if (a) a.textContent = y; if (b) b.textContent = y; })();
+
+/* ───── ambient tilt ───── */
+function enableTilt(){
+  if (!matchMedia("(hover:hover) and (pointer:fine)").matches || reduceMotion()) return;
+  const SEL = ".card, .job, .stat", MAX = 4;
+  let cur = null;
+  document.addEventListener("pointermove", e => {
+    const el = e.target.closest(SEL);
+    if (el !== cur){ if (cur) cur.style.transform = ""; cur = el; }
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const px = (e.clientX - r.left)/r.width - .5, py = (e.clientY - r.top)/r.height - .5;
+    el.style.transform = `perspective(900px) rotateX(${(-py*MAX).toFixed(2)}deg) rotateY(${(px*MAX).toFixed(2)}deg)`;
+  }, { passive:true });
+}
+
+/* ───── WebGL backdrop ───── */
+function initBackdrop(){
+  if (reduceMotion()) return;
+  const canvas = $("bgCanvas");
+  if (!canvas || !window.WebGLRenderingContext) return;
+  (async () => {
+    let THREE, renderer;
+    try{
+      THREE = await import("https://unpkg.com/three@0.160.0/build/three.module.js");
+      renderer = new THREE.WebGLRenderer({ canvas, antialias:true, alpha:true, powerPreference:"low-power" });
+    } catch(e){ console.warn("Backdrop skipped:", e.message); return; }
+
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, innerWidth/innerHeight, 1, 200);
+    camera.position.set(0,0,58);
+
+    const N = innerWidth < 720 ? 60 : 130, BX=44, BY=25, BZ=24;
+    const tc = document.createElement("canvas"); tc.width = tc.height = 64;
+    const tx = tc.getContext("2d");
+    const g = tx.createRadialGradient(32,32,0,32,32,32);
+    g.addColorStop(0,"rgba(255,255,255,1)"); g.addColorStop(.4,"rgba(255,255,255,.55)"); g.addColorStop(1,"rgba(255,255,255,0)");
+    tx.fillStyle = g; tx.fillRect(0,0,64,64);
+    const tex = new THREE.CanvasTexture(tc);
+
+    const palette = [0xff3547, 0x4d8dff, 0xd8dce6];
+    const nodes = [], group = new THREE.Group();
+    for (let i=0;i<N;i++){
+      const mat = new THREE.SpriteMaterial({ map:tex, color:palette[i%palette.length], transparent:true,
+        opacity:.55 + Math.random()*.3, depthWrite:false, blending:THREE.AdditiveBlending });
+      const spr = new THREE.Sprite(mat);
+      const s = 1.1 + Math.random()*1.6; spr.scale.set(s,s,1);
+      spr.position.set((Math.random()*2-1)*BX,(Math.random()*2-1)*BY,(Math.random()*2-1)*BZ);
+      group.add(spr);
+      nodes.push({ spr, vel:new THREE.Vector3((Math.random()-.5)*.012,(Math.random()-.5)*.012,(Math.random()-.5)*.01) });
+    }
+    scene.add(group);
+
+    const lineGeo = new THREE.BufferGeometry();
+    const lines = new THREE.LineSegments(lineGeo,
+      new THREE.LineBasicMaterial({ color:0x7a4a66, transparent:true, opacity:.2, blending:THREE.AdditiveBlending }));
+    scene.add(lines);
+
+    const LINK2 = 12.5*12.5, posArr = new Float32Array(N*N*6);
+    let mx=0,my=0,cx=0,cy=0,frame=0;
+    addEventListener("pointermove", e => { mx = e.clientX/innerWidth-.5; my = e.clientY/innerHeight-.5; }, { passive:true });
+
+    function tick(){
+      frame++;
+      for (const n of nodes){
+        n.spr.position.add(n.vel);
+        if (Math.abs(n.spr.position.x) > BX) n.vel.x *= -1;
+        if (Math.abs(n.spr.position.y) > BY) n.vel.y *= -1;
+        if (Math.abs(n.spr.position.z) > BZ) n.vel.z *= -1;
+      }
+      if (frame % 2 === 0){
+        let idx = 0;
+        for (let i=0;i<N;i++){ const a = nodes[i].spr.position;
+          for (let j=i+1;j<N;j++){ const b = nodes[j].spr.position;
+            const dx=a.x-b.x, dy=a.y-b.y, dz=a.z-b.z;
+            if (dx*dx+dy*dy+dz*dz < LINK2){
+              posArr[idx++]=a.x; posArr[idx++]=a.y; posArr[idx++]=a.z;
+              posArr[idx++]=b.x; posArr[idx++]=b.y; posArr[idx++]=b.z;
+            } } }
+        lineGeo.setAttribute("position", new THREE.BufferAttribute(posArr.slice(0,idx),3));
+      }
+      cx += (mx*6-cx)*.02; cy += (-my*4-cy)*.02;
+      camera.position.x = cx; camera.position.y = cy; camera.lookAt(0,0,0);
+      group.rotation.y += .0007;
+      renderer.render(scene,camera);
+      requestAnimationFrame(tick);
+    }
+    function onResize(){ camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight); }
+    onResize(); addEventListener("resize", onResize); tick();
+  })();
+}
+
+initBackdrop();
+enableTilt();
+</script>
+</body>
+</html>
